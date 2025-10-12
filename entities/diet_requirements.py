@@ -1,0 +1,67 @@
+class Diet_Requirements:
+    def __init__(
+            self,
+            isKosher,
+            isHalal,
+            isVegetarian,
+            isVegan,
+            isPescatarian,
+            hasDairy,
+            hasCelery,
+            hasGluten,
+            hasCrustaceans,
+            hasEggs,
+            hasFish,
+            hasLupin,
+            hasMolluscs,
+            hasMustard,
+            hasNuts,
+            hasSesame,
+            hasPeanuts,
+            hasSoybeans,
+            hasSulfurDioxide
+    ):
+        self.requirements_vector = (
+            isKosher,
+            isHalal,
+            isVegetarian,
+            isVegan,
+            isPescatarian,
+            hasDairy,
+            hasCelery,
+            hasGluten,
+            hasCrustaceans,
+            hasEggs,
+            hasFish,
+            hasLupin,
+            hasMolluscs,
+            hasMustard,
+            hasNuts,
+            hasSesame,
+            hasPeanuts,
+            hasSoybeans,
+            hasSulfurDioxide
+        )
+
+        # key: meaning; val: index of lookup
+        self.lookup_table = {
+            "isKosher":0,
+            "isHalal":1,
+            "isVegetarian":2,
+            "isVegan":3,
+            "isPescatarian":4,
+            "hasDairy":5,
+            "hasCelery":6,
+            "hasGluten":7,
+            "hasCrustaceans":8,
+            "hasEggs":9,
+            "hasFish":10,
+            "hasLupin":11,
+            "hasMolluscs":12,
+            "hasMustard":13,
+            "hasNuts":14,
+            "hasSesame":15,
+            "hasPeanuts":16,
+            "hasSoybeans":17,
+            "hasSulfurDioxide":18
+        }
