@@ -13,4 +13,5 @@ def add_profile(profile: User):
     cursor.execute("""
 insert into user(name, requirements) values (?, ?)
 """, [profile.name, requirements_json])
+    connection.commit()
     connection.close()
