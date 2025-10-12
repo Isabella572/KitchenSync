@@ -1,7 +1,6 @@
 import streamlit as st
 
 from entities.diet_requirements import Diet_Requirements
-from entities.user import User
 from profile_utils import *
 
 st.title("Active Profiles")
@@ -28,25 +27,26 @@ with st.expander("Add profile"):
     hasSoybeans = st.checkbox("Soybeans")
     hasSulfurDioxide = st.checkbox("SulfurDioxide")
 
-    st.button("Add profile", on_click=add_profile(User(name, Diet_Requirements(
-        isKosher=isKosher,
-        isHalal=isHalal,
-        isVegetarian=isVegetarian,
-        isVegan=isVegan,
-        isPescatarian=isPescatarian,
-        hasDairy=hasDairy,
-        hasCelery=hasCelery,
-        hasGluten=hasGluten,
-        hasCrustaceans=hasCrustaceans,
-        hasEggs=hasEggs,
-        hasFish=hasFish,
-        hasLupin=hasLupin,
-        hasMolluscs=hasMolluscs,
-        hasMustard=hasMustard,
-        hasNuts=hasNuts,
-        hasSesame =hasSesame,
-        hasPeanuts=hasPeanuts,
-        hasSoybeans=hasSoybeans,
-        hasSulfurDioxide=hasSulfurDioxide
+    if st.button("Add profile"):
+        add_profile(User(name, Diet_Requirements(
+            isKosher=isKosher,
+            isHalal=isHalal,
+            isVegetarian=isVegetarian,
+            isVegan=isVegan,
+            isPescatarian=isPescatarian,
+            hasDairy=hasDairy,
+            hasCelery=hasCelery,
+            hasGluten=hasGluten,
+            hasCrustaceans=hasCrustaceans,
+            hasEggs=hasEggs,
+            hasFish=hasFish,
+            hasLupin=hasLupin,
+            hasMolluscs=hasMolluscs,
+            hasMustard=hasMustard,
+            hasNuts=hasNuts,
+            hasSesame=hasSesame,
+            hasPeanuts=hasPeanuts,
+            hasSoybeans=hasSoybeans,
+            hasSulfurDioxide=hasSulfurDioxide
 
-    ))))
+        )))

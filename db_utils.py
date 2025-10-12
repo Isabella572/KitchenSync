@@ -3,9 +3,8 @@ import json
 
 from entities.user import User
 
-connection = sqlite3.connect('food.db')
-
 def add_profile(profile: User):
+    connection = sqlite3.connect('food.db')
     cursor = connection.cursor()
 
     requirements_tuple = profile.requirements.requirements_vector
@@ -14,4 +13,4 @@ def add_profile(profile: User):
     cursor.execute("""
 insert into user(name, requirements) values (?, ?)
 """, [profile.name, requirements_json])
-
+    connection.close()
