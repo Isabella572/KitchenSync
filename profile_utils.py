@@ -1,5 +1,6 @@
 import db_utils as db
 import streamlit as st
+import random
 
 from entities.diet_requirements import Diet_Requirements
 from entities.user import User
@@ -33,13 +34,14 @@ def add_or_update_profile(name, func, *args, **kwargs) -> bool:
         return True
 
 
-def profile_expander(add_new_profile: bool, name=None):
+def profile_expander(add_new_profile: bool, user_name=None):
     profile_string = "Add profile" if add_new_profile else "Update profile"
 
     user = User("", Diet_Requirements())
 
     if not add_new_profile:
         user = db.get_profile
+        #TODO: prepopulate checkboxes so user can edit profile
 
     with st.expander(profile_string):
         name = st.text_input("Name")
@@ -63,8 +65,8 @@ def profile_expander(add_new_profile: bool, name=None):
         hasSoybeans = st.checkbox("Soybeans")
         hasSulfurDioxide = st.checkbox("SulfurDioxide")
 
-        if st.button(profile_string):
-            if add_or_update_profile(name, add_profile if add_new_profile else update_profile,
+        if st.button(profile_string, key=(user_name if user_name else 'new_user') + str(add_new_profile)):
+            if add_or_update_profile(user_name, add_profile if add_new_profile else update_profile,
                                      isKosher=isKosher,
                                      isHalal=isHalal,
                                      isVegetarian=isVegetarian,
