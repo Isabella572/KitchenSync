@@ -27,7 +27,7 @@ def update_profile(profile: User):
 
     cursor.execute("""
     update user set requirements = ? where name = ?
-    """, [requirements_json, profile.name])
+    """, [requirements_json, profile.name])  # TODO: identify user by ID so we can change their name
     connection.commit()
     connection.close()
 
