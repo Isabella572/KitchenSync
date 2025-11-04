@@ -33,8 +33,6 @@ notSuitableFor text
 connection.commit()
 connection.close()
 
-# TODO: separate out into multiple cursor.execute functions - done
-
 
 
 
