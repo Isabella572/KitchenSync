@@ -26,8 +26,8 @@ def update_profile(profile: User):
     requirements_json = json.dumps(requirements_tuple)
 
     cursor.execute("""
-    update user set requirements = ? where name = ?
-    """, [requirements_json, profile.name])  # TODO: identify user by ID so we can change their name
+    update user set requirements = ? where id = ?
+    """, [requirements_json, profile.id])
     connection.commit()
     connection.close()
 
@@ -48,7 +48,7 @@ def get_profile(name: str) -> User:
 
     diet_requirements = Diet_Requirements(requirements_tuple)
 
-    user = User(user_db[1], diet_requirements)
+    user = User(user_db[0], user_db[1], diet_requirements)
 
     return user
 
@@ -74,4 +74,4 @@ def check_user_exists(name: str) -> bool:
     cursor.execute(
         "select count(*) from user where lower(name) = ?", (name,))
 
-    return cursor.fetchone()[0] == 1
+    return cursor.fetchone()[0] >= 1

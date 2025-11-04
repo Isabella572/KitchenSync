@@ -37,7 +37,7 @@ def add_or_update_profile(name, func, *args, **kwargs) -> bool:
 def profile_expander(add_new_profile: bool, user_name=None):
     profile_string = "Add profile" if add_new_profile else "Update profile"
 
-    user = User("", Diet_Requirements())
+    user = User(-1, "", Diet_Requirements())
 
     if not add_new_profile:
         user = db.get_profile(user_name)  #NOTE: doesn't allow two users with the same name
