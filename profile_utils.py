@@ -18,19 +18,19 @@ def get_all_profiles():
     return db.get_all_profiles()
 
 
-def check_user_exists(name: str) -> bool:
-    return db.check_user_exists(name)
+def check_user_exists(id: int, name: str) -> bool:
+    return db.check_user_exists(id, name)
 
 
-def add_or_update_profile(name, func, *args, **kwargs) -> bool:
-    if name is None or name is "":
+def add_or_update_profile(user, func) -> bool:
+    if user.name is None or user.name is "":
         st.error("Please enter a name")
         return False
-    elif check_user_exists(name) and func == add_profile:
+    elif check_user_exists(user.id, user.name):
         st.error("User already exists")
         return False
     else:
-        func(User(name, Diet_Requirements(*args, **kwargs)))
+        func(user)
         return True
 
 
@@ -43,21 +43,23 @@ def profile_expander(add_new_profile: bool, user_name=None):
         user = db.get_profile(user_name)  #NOTE: doesn't allow two users with the same name
         # TODO: use ID instead of name
 
+    if user_name is None:
+        user_name = ""
     lookup_table = user.requirements.lookup_table
     with st.expander(profile_string):
         user_name = st.text_input("Name", value=user.name)
         isKosher = st.checkbox(
             "Kosher", value=user.requirements.requirements_vector[lookup_table["isKosher"]],
-            key=user_name+"kosher"
+            key=user.name+"kosher"
             )
         isHalal = st.checkbox(
-            "Halal", value=user.requirements.requirements_vector[lookup_table["isHalal"]], key=user_name+"halal"
+            "Halal", value=user.requirements.requirements_vector[lookup_table["isHalal"]], key=user.name+"halal"
             )
         isVegetarian = st.checkbox(
-            "Vegetarian", value=user.requirements.requirements_vector[lookup_table["isVegetarian"]], key=user_name+"veggie"
+            "Vegetarian", value=user.requirements.requirements_vector[lookup_table["isVegetarian"]], key=user.name+"veggie"
             )
         isVegan = st.checkbox(
-            "Vegan", value=user.requirements.requirements_vector[lookup_table["isVegan"]], key=user_name+"vegan"
+            "Vegan", value=user.requirements.requirements_vector[lookup_table["isVegan"]], key=user.name+"vegan"
             )
         isPescatarian = st.checkbox(
             "Pescatarian", value=user.requirements.requirements_vector[lookup_table["isPescatarian"]], key=user_name+"pesc"
@@ -78,11 +80,8 @@ def profile_expander(add_new_profile: bool, user_name=None):
         hasSoybeans = st.checkbox("Soybeans", value=user.requirements.requirements_vector[lookup_table["hasSoybeans"]], key=user_name+"soy")
         hasSulfurDioxide = st.checkbox("SulfurDioxide", value=user.requirements.requirements_vector[lookup_table["hasSulfurDioxide"]], key=user_name+"so2")
 
-        if st.button(
-            profile_string, key=(user_name if user_name else 'new_user') + str(add_new_profile)
-            ):
-            if add_or_update_profile(user_name, add_profile if add_new_profile else update_profile,
-                                     isKosher=isKosher,
+        user.name = user_name
+        user.requirements = Diet_Requirements(isKosher=isKosher,
                                      isHalal=isHalal,
                                      isVegetarian=isVegetarian,
                                      isVegan=isVegan,
@@ -100,7 +99,10 @@ def profile_expander(add_new_profile: bool, user_name=None):
                                      hasSesame=hasSesame,
                                      hasPeanuts=hasPeanuts,
                                      hasSoybeans=hasSoybeans,
-                                     hasSulfurDioxide=hasSulfurDioxide
-                                     ):
+                                     hasSulfurDioxide=hasSulfurDioxide)
+
+        if st.button(
+            profile_string, key=(user_name if user_name else 'new_user') + str(add_new_profile)
+            ):
+            if add_or_update_profile(user, add_profile if add_new_profile else update_profile):
                 st.success("Profile added")
-                st.rerun()
