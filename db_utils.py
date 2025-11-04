@@ -26,8 +26,8 @@ def update_profile(profile: User):
     requirements_json = json.dumps(requirements_tuple)
 
     cursor.execute("""
-    update user set requirements = ? where id = ?
-    """, [requirements_json, profile.id])
+    update user set requirements = ?, name = ? where userId = ?
+    """, [requirements_json, profile.name, profile.id])
     connection.commit()
     connection.close()
 
@@ -50,6 +50,8 @@ def get_profile(name: str) -> User:
 
     user = User(user_db[0], user_db[1], diet_requirements)
 
+    print("json:", requirements_json)
+
     return user
 
 
@@ -65,13 +67,13 @@ def get_all_profiles():
     return profiles
 
 
-def check_user_exists(name: str) -> bool:
+def check_user_exists(id: int, name: str) -> bool:
     connection = sqlite3.connect('food.db')
     cursor = connection.cursor()
 
     name = name.lower()
 
     cursor.execute(
-        "select count(*) from user where lower(name) = ?", (name,))
+        "select count(*) from user where lower(name) = ? and userId <> ?", (name,id))
 
     return cursor.fetchone()[0] >= 1
