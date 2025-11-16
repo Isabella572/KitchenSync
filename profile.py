@@ -1,11 +1,24 @@
 from profile_utils import *
 import random
+from entities import user
 
 st.title("Active Profiles")
 
 profile_expander(True)
 
+def display_profile(profile: User):
+    st.write(f"Name: {profile.name}".title())
+    requirements = profile.requirements.requirements_vector
+    if not any(requirements):
+        st.write("No dietary requirements")
+    else:
+        requirement_indices = [i for i, val in enumerate(requirements) if val]
+        requirements_human_readable = [
+            profile.requirements.requirement_from_index[i] for i in requirement_indices
+            ]
+        st.write(f"Dietary requirements: {requirements_human_readable}")
+    
+
 for profile in get_all_profiles():
-    st.write(profile)
-    #if st.button("Edit profile", key=profile[1] + str(random.randint(0,99999))):
-    profile_expander(False, profile[1])  # profile[1] is user's name (0 is ID)
+    display_profile(profile)
+    profile_expander(False, profile.name)

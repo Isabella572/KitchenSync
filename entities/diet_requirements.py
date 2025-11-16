@@ -65,3 +65,5 @@ class Diet_Requirements:
             "hasSoybeans":17,
             "hasSulfurDioxide":18
         }
+
+        self.requirement_from_index = {v: k for k, v in self.lookup_table.items()}
