@@ -15,7 +15,7 @@ def update_profile(profile: User):
     db.update_profile(profile)
 
 
-def get_all_profiles():
+def get_all_profiles() -> list[User]:
     return db.get_all_profiles()
 
 
@@ -24,7 +24,7 @@ def check_user_exists(id: int, name: str) -> bool:
 
 
 def add_or_update_profile(user, func) -> bool:
-    if user.name is None or user.name is "":
+    if user.name is None or user.name == "":
         st.error("Please enter a name")
         return False
     elif check_user_exists(user.id, user.name):
@@ -59,35 +59,35 @@ def profile_expander(add_new_profile: bool, user_name=None):
         user_name = st.text_input("Name", value=user.name)
         isKosher = st.checkbox(
             "Kosher", value=user.requirements.requirements_vector[lookup_table["isKosher"]],
-            key=user.name+"kosher"
+            key=user.name+"kosher"+str(add_new_profile)
             )
         isHalal = st.checkbox(
-            "Halal", value=user.requirements.requirements_vector[lookup_table["isHalal"]], key=user.name+"halal"
+            "Halal", value=user.requirements.requirements_vector[lookup_table["isHalal"]], key=user.name+"halal"+str(add_new_profile)
             )
         isVegetarian = st.checkbox(
-            "Vegetarian", value=user.requirements.requirements_vector[lookup_table["isVegetarian"]], key=user.name+"veggie"
+            "Vegetarian", value=user.requirements.requirements_vector[lookup_table["isVegetarian"]], key=user.name+"veggie"+str(add_new_profile)
             )
         isVegan = st.checkbox(
-            "Vegan", value=user.requirements.requirements_vector[lookup_table["isVegan"]], key=user.name+"vegan"
+            "Vegan", value=user.requirements.requirements_vector[lookup_table["isVegan"]], key=user.name+"vegan"+str(add_new_profile)
             )
         isPescatarian = st.checkbox(
-            "Pescatarian", value=user.requirements.requirements_vector[lookup_table["isPescatarian"]], key=user_name+"pesc"
+            "Pescatarian", value=user.requirements.requirements_vector[lookup_table["isPescatarian"]], key=user_name+"pesc"+str(add_new_profile)
             )
         hasDairy = st.checkbox(
-            "Dairy", value=user.requirements.requirements_vector[lookup_table["hasDairy"]], key=user_name+"dairy")
-        hasCelery = st.checkbox("Celery", value=user.requirements.requirements_vector[lookup_table["hasCelery"]], key=user_name+"celery")
-        hasGluten = st.checkbox("Gluten", value=user.requirements.requirements_vector[lookup_table["hasGluten"]], key=user_name+"gluten")
-        hasCrustaceans = st.checkbox("Crustaceans", value=user.requirements.requirements_vector[lookup_table["hasCrustaceans"]], key=user_name+"crust")
-        hasEggs = st.checkbox("Eggs", value=user.requirements.requirements_vector[lookup_table["hasEggs"]], key=user_name+"eggs")
-        hasFish = st.checkbox("Fish", value=user.requirements.requirements_vector[lookup_table["hasFish"]], key=user_name+"fish")
-        hasLupin = st.checkbox("Lupin", value=user.requirements.requirements_vector[lookup_table["hasLupin"]], key=user_name+"lupin")
-        hasMolluscs = st.checkbox("Molluscs", value=user.requirements.requirements_vector[lookup_table["hasMolluscs"]], key=user_name+"molluscs")
-        hasMustard = st.checkbox("Mustard", value=user.requirements.requirements_vector[lookup_table["hasMustard"]], key=user_name+"mustard")
-        hasNuts = st.checkbox("Nuts", value=user.requirements.requirements_vector[lookup_table["hasNuts"]], key=user_name+"nuts")
-        hasSesame = st.checkbox("Sesame", value=user.requirements.requirements_vector[lookup_table["hasSesame"]], key=user_name+"sesame")
-        hasPeanuts = st.checkbox("Peanuts", value=user.requirements.requirements_vector[lookup_table["hasPeanuts"]], key=user_name+"peanuts")
-        hasSoybeans = st.checkbox("Soybeans", value=user.requirements.requirements_vector[lookup_table["hasSoybeans"]], key=user_name+"soy")
-        hasSulfurDioxide = st.checkbox("SulfurDioxide", value=user.requirements.requirements_vector[lookup_table["hasSulfurDioxide"]], key=user_name+"so2")
+            "Dairy", value=user.requirements.requirements_vector[lookup_table["hasDairy"]], key=user_name+"dairy"+str(add_new_profile))
+        hasCelery = st.checkbox("Celery", value=user.requirements.requirements_vector[lookup_table["hasCelery"]], key=user_name+"celery"+str(add_new_profile))
+        hasGluten = st.checkbox("Gluten", value=user.requirements.requirements_vector[lookup_table["hasGluten"]], key=user_name+"gluten"+str(add_new_profile))
+        hasCrustaceans = st.checkbox("Crustaceans", value=user.requirements.requirements_vector[lookup_table["hasCrustaceans"]], key=user_name+"crust"+str(add_new_profile))
+        hasEggs = st.checkbox("Eggs", value=user.requirements.requirements_vector[lookup_table["hasEggs"]], key=user_name+"eggs"+str(add_new_profile))
+        hasFish = st.checkbox("Fish", value=user.requirements.requirements_vector[lookup_table["hasFish"]], key=user_name+"fish"+str(add_new_profile))
+        hasLupin = st.checkbox("Lupin", value=user.requirements.requirements_vector[lookup_table["hasLupin"]], key=user_name+"lupin"+str(add_new_profile))
+        hasMolluscs = st.checkbox("Molluscs", value=user.requirements.requirements_vector[lookup_table["hasMolluscs"]], key=user_name+"molluscs"+str(add_new_profile))
+        hasMustard = st.checkbox("Mustard", value=user.requirements.requirements_vector[lookup_table["hasMustard"]], key=user_name+"mustard"+str(add_new_profile))
+        hasNuts = st.checkbox("Nuts", value=user.requirements.requirements_vector[lookup_table["hasNuts"]], key=user_name+"nuts"+str(add_new_profile))
+        hasSesame = st.checkbox("Sesame", value=user.requirements.requirements_vector[lookup_table["hasSesame"]], key=user_name+"sesame"+str(add_new_profile))
+        hasPeanuts = st.checkbox("Peanuts", value=user.requirements.requirements_vector[lookup_table["hasPeanuts"]], key=user_name+"peanuts"+str(add_new_profile))
+        hasSoybeans = st.checkbox("Soybeans", value=user.requirements.requirements_vector[lookup_table["hasSoybeans"]], key=user_name+"soy"+str(add_new_profile))
+        hasSulfurDioxide = st.checkbox("SulfurDioxide", value=user.requirements.requirements_vector[lookup_table["hasSulfurDioxide"]], key=user_name+"so2"+str(add_new_profile))
 
         user.name = user_name
         user.requirements = Diet_Requirements(isKosher=isKosher,

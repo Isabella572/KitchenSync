@@ -66,16 +66,22 @@ def get_profile(name: str) -> User:
     return user
 
 
-def get_all_profiles():
+def get_all_profiles() -> list[User]:
     connection = sqlite3.connect('food.db')
     cursor = connection.cursor()
 
     cursor.execute("select * from user")
 
     profiles = cursor.fetchall()
-
     connection.close()
-    return profiles
+
+    users: list[User] = []
+    for profile in profiles:
+        requirements_json = profile[2]
+        requirements_tuple = json.loads(requirements_json)
+        users.append(User(profile[0], profile[1], Diet_Requirements(*requirements_tuple)))
+
+    return users
 
 
 def check_user_exists(id: int, name: str) -> bool:
