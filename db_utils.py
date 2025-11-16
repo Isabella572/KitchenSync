@@ -32,6 +32,17 @@ def update_profile(profile: User):
     connection.close()
 
 
+def delete_profile(profile: User):
+    connection = sqlite3.connect('food.db')
+    cursor = connection.cursor()
+
+    cursor.execute("""
+                   delete from user where userId = ?
+    """, [profile.id])
+    connection.commit()
+    connection.close()
+
+
 def get_profile(name: str) -> User:
     connection = sqlite3.connect('food.db')
     cursor = connection.cursor()

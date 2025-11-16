@@ -1,3 +1,4 @@
+import time
 import db_utils as db
 import streamlit as st
 import random
@@ -32,6 +33,14 @@ def add_or_update_profile(user, func) -> bool:
     else:
         func(user)
         return True
+    
+
+def delete_profile(user) -> bool:
+    try:
+        db.delete_profile(user)
+        return True
+    except:
+        return False
 
 
 def profile_expander(add_new_profile: bool, user_name=None):
@@ -105,4 +114,12 @@ def profile_expander(add_new_profile: bool, user_name=None):
             profile_string, key=(user_name if user_name else 'new_user') + str(add_new_profile)
             ):
             if add_or_update_profile(user, add_profile if add_new_profile else update_profile):
-                st.success("Profile added")
+                st.success("Profile Saved")
+                time.sleep(1)
+                st.rerun()
+        if not add_new_profile:
+            if st.button("Delete profile", key=user_name + 'delete'):
+                if delete_profile(user):
+                    st.success("Profile deleted")
+                    time.sleep(1)
+                    st.rerun()
