@@ -1,69 +1,47 @@
 class Diet_Requirements:
     def __init__(
             self,
-            isKosher=False,
-            isHalal=False,
             isVegetarian=False,
             isVegan=False,
             isPescatarian=False,
             hasDairy=False,
-            hasCelery=False,
             hasGluten=False,
-            hasCrustaceans=False,
             hasEggs=False,
             hasFish=False,
-            hasLupin=False,
-            hasMolluscs=False,
-            hasMustard=False,
-            hasNuts=False,
-            hasSesame=False,
+            hasShellfish=False,
+            hasTreeNuts=False,
             hasPeanuts=False,
-            hasSoybeans=False,
-            hasSulfurDioxide=False
+            hasSoy=False,
+
     ):
         self.requirements_vector = (
-            isKosher,
-            isHalal,
             isVegetarian,
             isVegan,
             isPescatarian,
             hasDairy,
-            hasCelery,
             hasGluten,
-            hasCrustaceans,
             hasEggs,
             hasFish,
-            hasLupin,
-            hasMolluscs,
-            hasMustard,
-            hasNuts,
-            hasSesame,
+            hasShellfish,
+            hasTreeNuts,
             hasPeanuts,
-            hasSoybeans,
-            hasSulfurDioxide
+            hasSoy,
         )
 
-        # key: meaning; val: index of lookup
+        #key: meaning; val: index of lookup
         self.lookup_table = {
-            "isKosher":0,
-            "isHalal":1,
-            "isVegetarian":2,
-            "isVegan":3,
-            "isPescatarian":4,
-            "hasDairy":5,
-            "hasCelery":6,
-            "hasGluten":7,
-            "hasCrustaceans":8,
-            "hasEggs":9,
-            "hasFish":10,
-            "hasLupin":11,
-            "hasMolluscs":12,
-            "hasMustard":13,
-            "hasNuts":14,
-            "hasSesame":15,
-            "hasPeanuts":16,
-            "hasSoybeans":17,
-            "hasSulfurDioxide":18
-        }
+        "isVegetarian": 0,
+        "isVegan": 1,
+        "isPescatarian": 2,
+        "hasDairy": 3,
+        "hasGluten": 4,
+        "hasEggs": 5,
+        "hasFish": 6,
+        "hasShellfish": 7,
+        "hasTreeNuts": 8,
+        "hasPeanuts": 9,
+        "hasSoy": 10,
+    }
+
 
         self.requirement_from_index = {v: k for k, v in self.lookup_table.items()}
