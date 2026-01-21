@@ -57,13 +57,6 @@ def profile_expander(add_new_profile: bool, user_name=None):
     lookup_table = user.requirements.lookup_table
     with st.expander(profile_string):
         user_name = st.text_input("Name", value=user.name)
-        isKosher = st.checkbox(
-            "Kosher", value=user.requirements.requirements_vector[lookup_table["isKosher"]],
-            key=user.name+"kosher"+str(add_new_profile)
-            )
-        isHalal = st.checkbox(
-            "Halal", value=user.requirements.requirements_vector[lookup_table["isHalal"]], key=user.name+"halal"+str(add_new_profile)
-            )
         isVegetarian = st.checkbox(
             "Vegetarian", value=user.requirements.requirements_vector[lookup_table["isVegetarian"]], key=user.name+"veggie"+str(add_new_profile)
             )
@@ -75,40 +68,27 @@ def profile_expander(add_new_profile: bool, user_name=None):
             )
         hasDairy = st.checkbox(
             "Dairy", value=user.requirements.requirements_vector[lookup_table["hasDairy"]], key=user_name+"dairy"+str(add_new_profile))
-        hasCelery = st.checkbox("Celery", value=user.requirements.requirements_vector[lookup_table["hasCelery"]], key=user_name+"celery"+str(add_new_profile))
         hasGluten = st.checkbox("Gluten", value=user.requirements.requirements_vector[lookup_table["hasGluten"]], key=user_name+"gluten"+str(add_new_profile))
-        hasCrustaceans = st.checkbox("Crustaceans", value=user.requirements.requirements_vector[lookup_table["hasCrustaceans"]], key=user_name+"crust"+str(add_new_profile))
         hasEggs = st.checkbox("Eggs", value=user.requirements.requirements_vector[lookup_table["hasEggs"]], key=user_name+"eggs"+str(add_new_profile))
         hasFish = st.checkbox("Fish", value=user.requirements.requirements_vector[lookup_table["hasFish"]], key=user_name+"fish"+str(add_new_profile))
-        hasLupin = st.checkbox("Lupin", value=user.requirements.requirements_vector[lookup_table["hasLupin"]], key=user_name+"lupin"+str(add_new_profile))
-        hasMolluscs = st.checkbox("Molluscs", value=user.requirements.requirements_vector[lookup_table["hasMolluscs"]], key=user_name+"molluscs"+str(add_new_profile))
-        hasMustard = st.checkbox("Mustard", value=user.requirements.requirements_vector[lookup_table["hasMustard"]], key=user_name+"mustard"+str(add_new_profile))
-        hasNuts = st.checkbox("Nuts", value=user.requirements.requirements_vector[lookup_table["hasNuts"]], key=user_name+"nuts"+str(add_new_profile))
-        hasSesame = st.checkbox("Sesame", value=user.requirements.requirements_vector[lookup_table["hasSesame"]], key=user_name+"sesame"+str(add_new_profile))
+        hasShellfish = st.checkbox("Shellfish", value=user.requirements.requirements_vector[lookup_table["hasShellfish"]], key=user_name+"Shellfish"+str(add_new_profile))
+        hasTreeNuts = st.checkbox("TreeNuts", value=user.requirements.requirements_vector[lookup_table["hasTreeNuts"]], key=user_name+"Treenuts"+str(add_new_profile))
         hasPeanuts = st.checkbox("Peanuts", value=user.requirements.requirements_vector[lookup_table["hasPeanuts"]], key=user_name+"peanuts"+str(add_new_profile))
-        hasSoybeans = st.checkbox("Soybeans", value=user.requirements.requirements_vector[lookup_table["hasSoybeans"]], key=user_name+"soy"+str(add_new_profile))
-        hasSulfurDioxide = st.checkbox("SulfurDioxide", value=user.requirements.requirements_vector[lookup_table["hasSulfurDioxide"]], key=user_name+"so2"+str(add_new_profile))
+        hasSoy = st.checkbox("Soy", value=user.requirements.requirements_vector[lookup_table["hasSoy"]], key=user_name+"soy"+str(add_new_profile))
 
         user.name = user_name
-        user.requirements = Diet_Requirements(isKosher=isKosher,
-                                     isHalal=isHalal,
+        user.requirements = Diet_Requirements(
                                      isVegetarian=isVegetarian,
                                      isVegan=isVegan,
                                      isPescatarian=isPescatarian,
                                      hasDairy=hasDairy,
-                                     hasCelery=hasCelery,
                                      hasGluten=hasGluten,
-                                     hasCrustaceans=hasCrustaceans,
                                      hasEggs=hasEggs,
                                      hasFish=hasFish,
-                                     hasLupin=hasLupin,
-                                     hasMolluscs=hasMolluscs,
-                                     hasMustard=hasMustard,
-                                     hasNuts=hasNuts,
-                                     hasSesame=hasSesame,
+                                     hasShellfish=hasShellfish,
+                                     hasTreeNuts=hasTreeNuts,
                                      hasPeanuts=hasPeanuts,
-                                     hasSoybeans=hasSoybeans,
-                                     hasSulfurDioxide=hasSulfurDioxide)
+                                     hasSoy=hasSoy)
 
         if st.button(
             profile_string, key=(user_name if user_name else 'new_user') + str(add_new_profile)
