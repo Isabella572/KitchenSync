@@ -1,177 +1,269 @@
+# this is db_utils.py it handles all database interaction like creating tables, panty / shoppinglist / favourites managment , ratings etc.
+
 import sqlite3
-import json
 import pandas as pd
+from datetime import datetime
+import streamlit as st
+import ast
 
-from entities.user import User
-from entities.diet_requirements import Diet_Requirements
+def parse_structured_column(value):
+    try:
+        if isinstance(value, list):
+            return value
+        return ast.literal_eval(value)
+    except:
+        return []
 
-def add_profile(profile: User):
-    connection = sqlite3.connect('food.db')
-    cursor = connection.cursor()
+#cacheing the recipes to make code faster
+@st.cache_data
+def load_recipes():
+    df = pd.read_csv(
+        "recipes-with-nutrition.csv",
+        engine="python",
+        on_bad_lines="skip",
+    )
+    return df
 
-    requirements_tuple = profile.requirements.requirements_vector
-    requirements_json = json.dumps(requirements_tuple)
 
+DB_NAME = "food.db"
+
+#this creates the tables i need if they do not already exist. it doesnt modify the recipes table
+def initialise_database():
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    #user profile table that stores dietary requirements
     cursor.execute("""
-insert into user(name, requirements) values (?, ?)
-""", [profile.name, requirements_json])
-    connection.commit()
-    connection.close()
+        CREATE TABLE IF NOT EXISTS user_profile (
+            id INTEGER PRIMARY KEY,
+            isVegetarian INTEGER,
+            isVegan INTEGER,
+            isPescatarian INTEGER,
+            hasDairy INTEGER,
+            hasGluten INTEGER,
+            hasEggs INTEGER,
+            hasFish INTEGER,
+            hasShellfish INTEGER,
+            hasTreeNuts INTEGER,
+            hasPeanuts INTEGER,
+            hasSoy INTEGER
+        )
+    """)
 
 
-def update_profile(profile: User):
-    connection = sqlite3.connect('food.db')
-    cursor = connection.cursor()
+    #pantry table
+    cursor.execute("""CREATE TABLE IF NOT EXISTS pantry (id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item TEXT,
+        quantity REAL,
+        unit TEXT,
+        expiry_date TEXT,
+        category TEXT)""")
 
-    requirements_tuple = profile.requirements.requirements_vector
-    requirements_json = json.dumps(requirements_tuple)
 
+    #shopping list table
+    cursor.execute("""CREATE TABLE IF NOT EXISTS shoppinglist (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ingredient_name TEXT,
+    quantity REAL,
+    unit TEXT,
+    checked INTEGER DEFAULT 0)""")
+
+    #favourites table
+    cursor.execute("""CREATE TABLE IF NOT EXISTS favourites (id INTEGER PRIMARY KEY AUTOINCREMENT,
+        recipe_name TEXT UNIQUE)""")
+
+    #user history table for behaviour tracking
+    cursor.execute("""CREATE TABLE IF NOT EXISTS user_history (id INTEGER PRIMARY KEY AUTOINCREMENT,
+        recipe_name TEXT,
+        action TEXT,
+        rating INTEGER,
+        timestamp TEXT)""")
+
+    conn.commit()
+    conn.close()
+
+
+#below are all the pantry functions
+
+def add_pantry_item(item, quantity, unit, expiry_date, category):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
     cursor.execute("""
-    update user set requirements = ?, name = ? where userId = ?
-    """, [requirements_json, profile.name, profile.id])
-    connection.commit()
-    connection.close()
+        INSERT INTO pantry (item, quantity, unit, expiry_date, category)
+        VALUES (?, ?, ?, ?, ?)
+    """, (item, quantity, unit, expiry_date, category))
+    conn.commit()
+    conn.close()
 
-
-def delete_profile(profile: User):
-    connection = sqlite3.connect('food.db')
-    cursor = connection.cursor()
-
-    cursor.execute("""
-                   delete from user where userId = ?
-    """, [profile.id])
-    connection.commit()
-    connection.close()
-
-
-def get_dietary_requirements_object(row):
-    requirements_json = row[2]
-    requirements_tuple = json.loads(requirements_json)
-
-    diet_requirements = Diet_Requirements(requirements_tuple)
-    return diet_requirements
-
-
-def get_profile(name: str) -> User:
-    connection = sqlite3.connect('food.db')
-    cursor = connection.cursor()
-
-    # NOTE: assumes name is unique identifier. We don't allow multiple users with the
-    # same name
-    cursor.execute("select * from user where name = ?", [name])
-
-    user_db = cursor.fetchone()
-
-    diet_requirements = get_dietary_requirements_object(user_db)
-
-    user = User(user_db[0], user_db[1], diet_requirements)
-
-    return user
-
-
-def get_all_profiles() -> list[User]:
-    connection = sqlite3.connect('food.db')
-    cursor = connection.cursor()
-
-    cursor.execute("select * from user")
-
-    profiles = cursor.fetchall()
-    connection.close()
-
-    users: list[User] = []
-    for profile in profiles:
-        requirements_json = profile[2]
-        requirements_tuple = json.loads(requirements_json)
-        users.append(User(profile[0], profile[1], Diet_Requirements(*requirements_tuple[:11])))
-
-    return users
-
-
-def check_user_exists(id: int, name: str) -> bool:
-    connection = sqlite3.connect('food.db')
-    cursor = connection.cursor()
-
-    name = name.lower()
-
-    cursor.execute(
-        "select count(*) from user where lower(name) = ? and userId <> ?", (name,id))
-
-    return cursor.fetchone()[0] >= 1
-
-
-
-
-
-
-def add_pantry_item(name: str, quantity: float, units: str, expiry_date: str):
-    connection = sqlite3.connect('food.db')
-    cursor = connection.cursor()
-
-    cursor.execute("""
-    INSERT INTO Fridge (item, quantity, units, expiryDate)
-    VALUES (?, ?, ?, ?)
-    """, (name, quantity, units, expiry_date))
-
-    connection.commit()
-    connection.close()
 
 
 def get_all_pantry_items():
-    connection = sqlite3.connect('food.db')
-    cursor = connection.cursor()
-
-    cursor.execute("SELECT item, quantity, units, expiryDate FROM Fridge")
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM pantry")
     items = cursor.fetchall()
 
-    connection.close()
+    conn.close()
     return items
 
 
-def delete_pantry_item(item_name: str):
-    connection = sqlite3.connect('food.db')
-    cursor = connection.cursor()
+def delete_pantry_item(item_id):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
 
-    cursor.execute("DELETE FROM Fridge WHERE item = ?", (item_name,))
-    connection.commit()
-    connection.close()
-
-
+    cursor.execute("DELETE FROM pantry WHERE id = ?", (item_id,))
+    conn.commit()
+    conn.close()
 
 
+#below are all the shoppinglist functions
 
-def get_filtered_recipes(diet_labels: list[str]):
-    connection = sqlite3.connect('food.db')
-    cursor = connection.cursor()
-
-    placeholders = ",".join("?" for _ in diet_labels)
-
-    query = f"""
-    SELECT "Recipe Name", Ingredients, Instructions, Diet
-    FROM recipes
-    WHERE Diet IN ({placeholders})
-    """
-
-    cursor.execute(query, diet_labels)
-    results = cursor.fetchall()
-    connection.close()
-    return results
+def get_shoppinglist():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM shoppinglist")
+    items = cursor.fetchall()
+    conn.close()
+    return items
 
 
+def add_to_shoppinglist(name, quantity, unit):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO shoppinglist (ingredient_name, quantity, unit)
+        VALUES (?, ?, ?)
+    """, (name, quantity, unit))
+
+    conn.commit()
+    conn.close()
 
 
-DB_PATH = "food.db"
+def update_shopping_item(item_id, checked):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
 
-def load_pantry():
-    conn = sqlite3.connect(DB_PATH)
-    try:
-        df = pd.read_sql("SELECT * FROM pantry", conn)
-    except Exception:
-        df = pd.DataFrame()
+    cursor.execute("""
+        UPDATE shoppinglist
+        SET checked = ?
+        WHERE id = ?
+    """, (checked, item_id))
+
+    conn.commit()
+    conn.close()
+
+def remove_shopping_item(item_id):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM shoppinglist WHERE id = ?", (item_id,))
+    conn.commit()
+    conn.close()
+
+
+def clear_shoppinglist():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM shoppinglist")
+    conn.commit()
+    conn.close()
+
+
+#below are all the favourite functions
+
+def add_favourite(recipe_name):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT OR IGNORE INTO favourites (recipe_name)
+        VALUES (?)
+    """, (recipe_name,))
+
+    conn.commit()
+    conn.close()
+
+
+def get_favourites():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT recipe_name FROM favourites")
+    favs = [row[0] for row in cursor.fetchall()]
+    conn.close()
+    return favs
+
+def remove_favourite(recipe_name):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        DELETE FROM favourites
+        WHERE recipe_name = ?
+    """, (recipe_name,))
+
+    conn.commit()
+    conn.close()
+
+#below is the behaviour tracking (favourites, cooked and rated)
+
+def add_user_action(recipe_name, action, rating=None):
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO user_history (recipe_name, action, rating, timestamp)
+        VALUES (?, ?, ?, ?)
+    """, (recipe_name, action, rating, datetime.now().isoformat()))
+
+    conn.commit()
+    conn.close()
+
+
+def get_user_history():
+    conn = sqlite3.connect(DB_NAME)
+    df = pd.read_sql("SELECT * FROM user_history", conn)
     conn.close()
     return df
 
-def load_recipes():
-    conn = sqlite3.connect("food.db")
-    df = pd.read_sql_query("SELECT * FROM recipes", conn)
+#below are all the profile funtions
+
+def save_user_profile(requirements):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM user_profile")
+
+    cursor.execute("""
+        INSERT INTO user_profile (
+            id,
+            isVegetarian,
+            isVegan,
+            isPescatarian,
+            hasDairy,
+            hasGluten,
+            hasEggs,
+            hasFish,
+            hasShellfish,
+            hasTreeNuts,
+            hasPeanuts,
+            hasSoy
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        1,
+        *requirements.requirements_vector
+    ))
+
+    conn.commit()
     conn.close()
-    return df
+
+
+def load_user_profile():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM user_profile WHERE id = 1")
+    row = cursor.fetchone()
+    conn.close()
+    return row

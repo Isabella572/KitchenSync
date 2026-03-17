@@ -1,114 +1,246 @@
-import sqlite3
+# this reccomender.py it is where the recommendations are done through diet and allergy filtersing, pantry and behaviour based scoring and then the final reccomendations
+
+import json
+from datetime import datetime
 import pandas as pd
-from datetime import datetime, timedelta
-from db_utils import load_recipes, load_pantry
+import db_utils
+from db_utils import parse_structured_column
 
 
-def get_pantry_items():
-    conn = sqlite3.connect("food.db")
-    df = pd.read_sql("SELECT item, quantity, expiryDate FROM Fridge", conn)
-    conn.close()
-    return df
 
-def get_recipes():
-    conn = sqlite3.connect("food.db")
-    df = pd.read_sql("SELECT * FROM recipes", conn)
-    conn.close()
-    return df
+#this extracts the food names from structed ingredient json
+def get_food_names(ingredients_json):
+    foods = set()
+    for item in ingredients_json:
+        if "food" in item:
+            foods.add(item["food"].lower())
+    return foods
 
-def recipe_matches_diet(recipe_row, user_requirements):
 
-    ingredients_text = str(recipe_row.get("ingredient_lines", "")).lower()
+#below is all the dietary filtering
 
-    meat_words = [
-        "chicken", "beef", "pork", "bacon", "ham", "turkey", "lamb",
-        "fish", "salmon", "tuna", "shrimp", "prawn", "anchovy",
-        "sausage", "pepperoni", "prosciutto", "veal", "duck", 
-        "venison", "rabbit", "bison", "cod", "tilapia", "haddock", "catfish",
-        "mackerel", "sardines", "halibut", "sea bass", "crab", "lobster", "clams", "mussles",
-        "calamari", "octupus", "scallops", "oysters", "trout", "red snapper", "swordfish",
-        "flounder", "sole", "pollock"
+#this filter based on allergies + vegiterian vegan and pescaterian
+def recipe_matches_requirements(recipe_row, user_requirements):
+
+    diet_labels = [
+        str(label).lower()
+        for label in parse_structured_column(recipe_row["diet_labels"])
+    ]
+    health_labels = parse_structured_column(recipe_row["health_labels"])
+    cautions = [
+        str(label).lower()
+        for label in parse_structured_column(recipe_row["cautions"])
     ]
 
-    is_vegetarian = user_requirements.requirements_vector[
-        user_requirements.lookup_table["isVegetarian"]
-    ]
+    req = user_requirements.lookup_table
+    vec = user_requirements.requirements_vector
 
-    if is_vegetarian:
-        for word in meat_words:
-            if word in ingredients_text:
-                return False
+    health_labels_lower = [str(h).lower() for h in health_labels]
+
+    if vec[req["isVegetarian"]] and "vegetarian" not in health_labels_lower:
+        return False
+    if vec[req["isVegan"]] and "vegan" not in health_labels_lower:
+        return False
+    if vec[req["isPescatarian"]] and "pescatarian" not in health_labels_lower:
+        return False
+    
+    allergy_map = {
+        "hasDairy": "Dairy",
+        "hasGluten": "Gluten",
+        "hasEggs": "Egg",
+        "hasFish": "Fish",
+        "hasShellfish": "Shellfish",
+        "hasTreeNuts": "Tree-Nuts",
+        "hasPeanuts": "Peanuts",
+        "hasSoy": "Soy" }
+
+    for key, label in allergy_map.items():
+        if vec[req[key]] and label in cautions:
+            return False
 
     return True
 
-    print(recipe_row.keys())
-    print(ingredients_text[:200])
+
+#below is all the pantry scoring
+
+#this scored based on ingredient matches and expiry priority. it returns a decimal score between 0 and 1
+def score_pantry(recipe_row, pantry_items):
+
+    ingredients_json = parse_structured_column(recipe_row["ingredients"])
+
+    if not ingredients_json:
+        return 0, 0
+
+    matched = 0
+    expiring_count = 0
+    total_ingredients = len(ingredients_json)
+
+    for ingredient in ingredients_json:
+
+        recipe_food = (ingredient.get("food") or "").lower()
+        recipe_quantity = ingredient.get("quantity", 0)
+        recipe_unit = (ingredient.get("measure") or "").lower()
+
+        for _, pantry_item, pantry_quantity, pantry_unit, expiry_date, _ in pantry_items:
+
+            if pantry_item.lower() == recipe_food:
+
+                # ✅ Case 1: Units match → check quantity
+                if pantry_unit and recipe_unit and pantry_unit.lower() == recipe_unit:
+
+                    if pantry_quantity >= recipe_quantity:
+                        matched += 1
+
+                # ✅ Case 2: Units differ → fallback to presence match
+                else:
+                    matched += 1
+
+                # Expiry tracking
+                if expiry_date:
+                    try:
+                        days_left = (datetime.fromisoformat(expiry_date) - datetime.now()).days
+                        if days_left < 0:
+                            expiring_count += 1.0   # full weight
+                        elif days_left <= 5:
+                            expiring_count += 0.5   # half weight
+                    except:
+                        pass
+
+                break  # stop checking pantry once matched
+
+    pantry_match = matched / total_ingredients
+    expiry_priority = expiring_count / total_ingredients
+
+    return pantry_match, expiry_priority
 
 
 
-def score_recipe(recipe_row, pantry_df):
-    recipe_ingredients = str(recipe_row["ingredients"]).lower()
-    owned = 0
+#below is all the behavior scoring
 
-    for _, row in pantry_df.iterrows():
-        if row["name"].lower() in recipe_ingredients:
-            owned += 1
+# this is based on similarity to previous recipes through ratings and favourites
+def score_behaviour(recipe_row, user_history_df, recipes_lookup):
 
-    return owned
-
-
-
-def recommend_recipes(user_requirements):
-    recipes_df = load_recipes()
-    pantry_df = load_pantry()
-
-    filtered_rows = []
-
-    for _, row in recipes_df.iterrows():
-        if recipe_matches_diet(row, user_requirements):
-            filtered_rows.append(row)
-
-    filtered_df = pd.DataFrame(filtered_rows)
-
-    if not filtered_df.empty:
-        filtered_df["score"] = filtered_df.apply(lambda r: score_recipe(r, pantry_df), axis=1)
-        filtered_df = filtered_df.sort_values("score", ascending=False)
-
-    return filtered_df.head(25)
-
-
-
-def load_pantry():
-    conn = sqlite3.connect("food.db")
-    df = pd.read_sql("SELECT item, expiryDate FROM Fridge", conn)
-    conn.close()
-    return df
-
-
-def score_recipe(recipe_row, pantry_df):
-    if pantry_df.empty:
+    if user_history_df.empty:
         return 0
+    recipe_name = recipe_row["recipe_name"]
+    recipe_ingredients = get_food_names(parse_structured_column(recipe_row["ingredients"]))
+    recipe_cuisine = set(parse_structured_column(recipe_row["cuisine_type"]))
+    recipe_diets = set(parse_structured_column(recipe_row["diet_labels"]))
+    similarity_scores = []
+    rating_bonus = 0
+    favourite_bonus = 0
 
-    recipe_ingredients = str(recipe_row["ingredient_lines"]).lower()
+# Group interactions by recipe to prevent stacking
+    grouped_history = user_history_df.groupby("recipe_name")
 
-    score = 0
+    for interacted_name, interactions in grouped_history:
 
-    for _, item in pantry_df.iterrows():
-        name = str(item["item"]).lower()
-        expiry = item["expiryDate"]
+        if interacted_name not in recipes_lookup.index:
+            continue
 
-        if name in recipe_ingredients:
-            score += 5
+        match_row = recipes_lookup.loc[interacted_name]
+        match_ingredients = get_food_names(parse_structured_column(match_row["ingredients"]))
+        match_cuisine = set(parse_structured_column(match_row["cuisine_type"]))
+        match_diets = set(parse_structured_column(match_row["diet_labels"]))
 
-            if expiry:
-                try:
-                    days_left = (datetime.fromisoformat(expiry) - datetime.now()).days
-                    if days_left <= 2:
-                        score += 5
-                    elif days_left <= 5:
-                        score += 2
-                except:
-                    pass
+        # Ingredient similarity
+        ingredient_union = recipe_ingredients | match_ingredients
+        if ingredient_union:
+            ingredient_similarity = len(recipe_ingredients & match_ingredients) / len(ingredient_union)
+        else:
+            ingredient_similarity = 0
 
-    return score
+        # Cuisine similarity
+        cuisine_similarity = 1 if recipe_cuisine & match_cuisine else 0
+
+        # Diet similarity
+        diet_similarity = 1 if recipe_diets & match_diets else 0
+
+        similarity = (ingredient_similarity + cuisine_similarity + diet_similarity) / 3
+        similarity_scores.append(similarity)
+
+        # Rating bonus (use highest rating only)
+        rated_rows = interactions[interactions["action"] == "rated"]
+        if not rated_rows.empty:
+            max_rating = rated_rows["rating"].max()
+            rating_bonus += (max_rating / 5) * 0.25
+
+        # Favourite bonus (apply once)
+        if any(interactions["action"] == "favourite"):
+            favourite_bonus += 0.3
+
+
+    if similarity_scores:
+        base_similarity = sum(similarity_scores) / len(similarity_scores)
+    else:
+        base_similarity = 0
+    intent_bonus = 0.05 if not user_history_df.empty else 0
+    final_score = base_similarity + rating_bonus + favourite_bonus + intent_bonus
+
+    return min(final_score, 1)
+
+
+#the main recommendations function
+
+#this returns the ranked recipes ddataframe
+def recommend_recipes(user_requirements):
+
+    recipes_df = db_utils.load_recipes()
+
+    sample = recipes_df["diet_labels"].dropna().head(3).tolist()
+    print("Diet labels sample:", sample)
+
+    pantry_items = db_utils.get_all_pantry_items()
+    user_history = db_utils.get_user_history()
+    filtered = []
+    for _, row in recipes_df.iterrows():
+        if recipe_matches_requirements(row, user_requirements):
+            filtered.append(row)
+
+    filtered_df = pd.DataFrame(filtered)
+    if filtered_df.empty:
+        empty_df = pd.DataFrame()
+        return empty_df, empty_df
+    
+    recipes_lookup = recipes_df.set_index("recipe_name")
+
+    layer1_scores = []
+    layer2_scores = []
+
+    for _, row in filtered_df.iterrows():
+
+        pantry_match, expiry_priority = score_pantry(row, pantry_items)
+        behaviour_score = score_behaviour(row, user_history, recipes_lookup)
+
+        #layer 1 reccomended for you
+        layer1_score = (
+            (behaviour_score * 0.8) +
+            (pantry_match * 0.1) +
+            (expiry_priority * 0.1)
+        )
+
+        #layer two using owned ingredients
+        layer2_score = (
+            (expiry_priority * 0.55) +
+            (pantry_match * 0.35) +
+            (behaviour_score * 0.1)
+        )
+
+        layer1_scores.append(layer1_score)
+        layer2_scores.append(layer2_score)
+
+    filtered_df["layer1_score"] = layer1_scores
+    filtered_df["layer2_score"] = layer2_scores
+
+    layer1_df = filtered_df.sort_values(
+        by="layer1_score",
+        ascending=False
+    )
+
+    layer2_df = filtered_df.sort_values(
+        by="layer2_score",
+        ascending=False
+    )
+
+    return layer1_df, layer2_df
 
