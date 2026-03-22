@@ -72,11 +72,14 @@ def pantry_page():
 
             if item[4]:
                 days_left = (datetime.fromisoformat(item[4]) - datetime.now()).days
-
-                if days_left < 0:
+                days_left += 1
+                if days_left <= 0:
                     colour = "red"
-                    expiry_text = "⚠️ EXPIRED"
-                elif days_left <= 3:
+                    if days_left == 0:
+                        expiry_text = "Expires TODAY"
+                    else:
+                        expiry_text = "EXPIRED"
+                elif days_left <= 2:
                     colour = "orange"
                     expiry_text = f"Expires in {days_left} day(s)"
                 else:

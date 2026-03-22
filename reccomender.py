@@ -41,8 +41,18 @@ def recipe_matches_requirements(recipe_row, user_requirements):
         return False
     if vec[req["isVegan"]] and "vegan" not in health_labels_lower:
         return False
-    if vec[req["isPescatarian"]] and "pescatarian" not in health_labels_lower:
-        return False
+    if vec[req["isPescatarian"]]:
+        fish_keywords = ["fish", "salmon", "tuna", "cod", "haddock", "prawn", "shrimp", "crab", "lobster", "seafood", "anchovy", "sardine", "mackerel", "trout", "tilapia", "bass", "halibut"]
+        meat_keywords = ["beef", "pork", "chicken", "lamb", "turkey", "bacon", "ham", "veal", "duck", "venison", "sausage", "salami", "pepperoni"]
+        ingredients_json = parse_structured_column(recipe_row["ingredients"])
+        ingredient_names = [item.get("food", "").lower() for item in ingredients_json]
+        has_fish = any(fish in ingredient for fish in fish_keywords for ingredient in ingredient_names)
+        has_meat = any(meat in ingredient for meat in meat_keywords for ingredient in ingredient_names)
+        if has_meat:
+            return False
+        # fish recipes are allowed through even if not tagged vegetarian
+        if not has_fish and "vegetarian" not in health_labels_lower:
+            return False
     
     allergy_map = {
         "hasDairy": "Dairy",
@@ -73,6 +83,7 @@ def score_pantry(recipe_row, pantry_items):
 
     matched = 0
     expiring_count = 0
+    already_matched = set()
     total_ingredients = len(ingredients_json)
 
     for ingredient in ingredients_json:
@@ -83,30 +94,27 @@ def score_pantry(recipe_row, pantry_items):
 
         for _, pantry_item, pantry_quantity, pantry_unit, expiry_date, _ in pantry_items:
 
-            if pantry_item.lower() == recipe_food:
-
-                # ✅ Case 1: Units match → check quantity
-                if pantry_unit and recipe_unit and pantry_unit.lower() == recipe_unit:
-
-                    if pantry_quantity >= recipe_quantity:
+            if pantry_item.lower() in recipe_food or recipe_food in pantry_item.lower():
+                if recipe_food not in already_matched:
+                    already_matched.add(recipe_food)
+                    if pantry_unit and recipe_unit and pantry_unit.lower() == recipe_unit:
+                        if pantry_quantity >= recipe_quantity:
+                            matched += 1
+                    else:
                         matched += 1
-
-                # ✅ Case 2: Units differ → fallback to presence match
-                else:
-                    matched += 1
 
                 # Expiry tracking
                 if expiry_date:
                     try:
                         days_left = (datetime.fromisoformat(expiry_date) - datetime.now()).days
                         if days_left < 0:
-                            expiring_count += 1.0   # full weight
+                            expiring_count += 1.0   #full weight
                         elif days_left <= 5:
                             expiring_count += 0.5   # half weight
                     except:
                         pass
 
-                break  # stop checking pantry once matched
+                break  
 
     pantry_match = matched / total_ingredients
     expiry_priority = expiring_count / total_ingredients
@@ -194,6 +202,10 @@ def recommend_recipes(user_requirements):
     user_history = db_utils.get_user_history()
     filtered = []
     for _, row in recipes_df.iterrows():
+        # skip recipes with fewer than 5 ingredients
+        ingredients = parse_structured_column(row["ingredients"])
+        if len(ingredients) < 5:
+            continue
         if recipe_matches_requirements(row, user_requirements):
             filtered.append(row)
 
@@ -206,6 +218,7 @@ def recommend_recipes(user_requirements):
 
     layer1_scores = []
     layer2_scores = []
+    pantry_scores = []
 
     for _, row in filtered_df.iterrows():
 
@@ -228,9 +241,11 @@ def recommend_recipes(user_requirements):
 
         layer1_scores.append(layer1_score)
         layer2_scores.append(layer2_score)
+        pantry_scores.append(pantry_match)
 
     filtered_df["layer1_score"] = layer1_scores
     filtered_df["layer2_score"] = layer2_scores
+    filtered_df["pantry_match"] = pantry_scores
 
     layer1_df = filtered_df.sort_values(
         by="layer1_score",
