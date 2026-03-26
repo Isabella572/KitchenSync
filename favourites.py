@@ -1,4 +1,4 @@
-# this is favourites.py it does the favourites page. it displays them and can also remove them
+#this is favourites.py it displays all the recipes that the user has saved and allows them to be removed
 
 import streamlit as st
 import db_utils
@@ -17,7 +17,7 @@ def favourites_page():
     recipes_df = db_utils.load_recipes()
     user_history = db_utils.get_user_history()
 
-    # build ratings dictionary
+    #builds a dictionary of recipe_name to highest rating using highest rather than most recent because maybe the user re-rates a recipe lower after another attempt
     ratings_dict = {}
     if not user_history.empty:
         rated = user_history[user_history["action"] == "rated"]
@@ -28,6 +28,7 @@ def favourites_page():
                 if name not in ratings_dict or val > ratings_dict[name]:
                     ratings_dict[name] = val
 
+    #filters the full recipe dataset down to only favourited the recipes
     favourite_recipes = recipes_df[recipes_df["recipe_name"].isin(favourites)]
 
     for _, row in favourite_recipes.iterrows():
@@ -40,7 +41,6 @@ def favourites_page():
             st.write(f"Cuisine: {row['cuisine_type']}")
             st.write(f"Calories: {row['calories']}")
 
-            # show rating if it exists
             recipe_rating = ratings_dict.get(row["recipe_name"])
             if recipe_rating is not None:
                 stars = "⭐" * int(recipe_rating)

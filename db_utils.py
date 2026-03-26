@@ -1,4 +1,4 @@
-# this is db_utils.py it handles all database interaction like creating tables, panty / shoppinglist / favourites managment , ratings etc.
+# this is db_utils.py it handels all the database intereaction for my website like table creation and all other files import from here so no other file touches the database directly
 
 import sqlite3
 import pandas as pd
@@ -6,6 +6,8 @@ from datetime import datetime
 import streamlit as st
 import ast
 
+
+#the CSV with the recipes stores lists as stings eg ['vegan','glutenfree'...] so this converts them back into actual python lists so that they can be iterated
 def parse_structured_column(value):
     try:
         if isinstance(value, list):
@@ -14,28 +16,23 @@ def parse_structured_column(value):
     except:
         return []
 
-#cacheing the recipes to make code faster
+
+#this was added because without it every page interaction reloaded tens of thousands of rows which slowed down the website significantly
 @st.cache_data
 def load_recipes():
-    df = pd.read_csv(
-        "recipes-with-nutrition.csv",
-        engine="python",
-        on_bad_lines="skip",
-    )
+    df = pd.read_csv("recipes-with-nutrition.csv", engine="python", on_bad_lines="skip",)
     return df
 
 
 DB_NAME = "food.db"
 
-#this creates the tables i need if they do not already exist. it doesnt modify the recipes table
+
+#this function creates all tables on the first run if they dont exist yet
 def initialise_database():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
-    # profiles table - replaces user_profile
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS profiles (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cursor.execute("""CREATE TABLE IF NOT EXISTS profiles (id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT UNIQUE,
             isVegetarian INTEGER DEFAULT 0,
             isVegan INTEGER DEFAULT 0,
@@ -47,20 +44,22 @@ def initialise_database():
             hasShellfish INTEGER DEFAULT 0,
             hasTreeNuts INTEGER DEFAULT 0,
             hasPeanuts INTEGER DEFAULT 0,
-            hasSoy INTEGER DEFAULT 0
-        )
-    """)
+            hasSoy INTEGER DEFAULT 0,
+            isGuest INTEGER DEFAULT 0)""")
 
-    # pantry table
-    cursor.execute("""CREATE TABLE IF NOT EXISTS pantry (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+    #I used alter table here instead of recreating it so that any existing user data is preserved when the app is updated
+    try:
+        cursor.execute("ALTER TABLE profiles ADD COLUMN isGuest INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  
+
+    cursor.execute("""CREATE TABLE IF NOT EXISTS pantry (id INTEGER PRIMARY KEY AUTOINCREMENT,
         item TEXT,
         quantity REAL,
         unit TEXT,
         expiry_date TEXT,
         category TEXT)""")
 
-    # shopping list table
     cursor.execute("""CREATE TABLE IF NOT EXISTS shoppinglist (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         ingredient_name TEXT,
@@ -68,12 +67,10 @@ def initialise_database():
         unit TEXT,
         checked INTEGER DEFAULT 0)""")
 
-    # favourites table
     cursor.execute("""CREATE TABLE IF NOT EXISTS favourites (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         recipe_name TEXT UNIQUE)""")
 
-    # user history table
     cursor.execute("""CREATE TABLE IF NOT EXISTS user_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         recipe_name TEXT,
@@ -85,40 +82,34 @@ def initialise_database():
     conn.close()
 
 
-#below are all the pantry functions
+#pantry functions
 
 def add_pantry_item(item, quantity, unit, expiry_date, category):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO pantry (item, quantity, unit, expiry_date, category)
+    cursor.execute("""INSERT INTO pantry (item, quantity, unit, expiry_date, category)
         VALUES (?, ?, ?, ?, ?)
     """, (item, quantity, unit, expiry_date, category))
     conn.commit()
     conn.close()
-
-
 
 def get_all_pantry_items():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM pantry")
     items = cursor.fetchall()
-
     conn.close()
     return items
-
 
 def delete_pantry_item(item_id):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-
     cursor.execute("DELETE FROM pantry WHERE id = ?", (item_id,))
     conn.commit()
     conn.close()
 
 
-#below are all the shoppinglist functions
+#shopping list functions
 
 def get_shoppinglist():
     conn = sqlite3.connect(DB_NAME)
@@ -128,30 +119,22 @@ def get_shoppinglist():
     conn.close()
     return items
 
-
 def add_to_shoppinglist(name, quantity, unit):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-
-    cursor.execute("""
-        INSERT INTO shoppinglist (ingredient_name, quantity, unit)
+    cursor.execute("""INSERT INTO shoppinglist (ingredient_name, quantity, unit)
         VALUES (?, ?, ?)
     """, (name, quantity, unit))
-
     conn.commit()
     conn.close()
-
 
 def update_shopping_item(item_id, checked):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-
-    cursor.execute("""
-        UPDATE shoppinglist
+    cursor.execute("""UPDATE shoppinglist
         SET checked = ?
         WHERE id = ?
     """, (checked, item_id))
-
     conn.commit()
     conn.close()
 
@@ -165,14 +148,12 @@ def remove_shopping_item(item_id):
 def edit_shopping_item(item_id, name, quantity, unit):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE shoppinglist
+    cursor.execute("""UPDATE shoppinglist
         SET ingredient_name = ?, quantity = ?, unit = ?
         WHERE id = ?
     """, (name, quantity, unit, item_id))
     conn.commit()
     conn.close()
-
 
 def clear_shoppinglist():
     conn = sqlite3.connect(DB_NAME)
@@ -182,20 +163,16 @@ def clear_shoppinglist():
     conn.close()
 
 
-#below are all the favourite functions
+#favourites functions
 
 def add_favourite(recipe_name):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-
-    cursor.execute("""
-        INSERT OR IGNORE INTO favourites (recipe_name)
+    cursor.execute("""INSERT OR IGNORE INTO favourites (recipe_name)
         VALUES (?)
     """, (recipe_name,))
-
     conn.commit()
     conn.close()
-
 
 def get_favourites():
     conn = sqlite3.connect(DB_NAME)
@@ -208,32 +185,28 @@ def get_favourites():
 def remove_favourite(recipe_name):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-
-    cursor.execute("""
-        DELETE FROM favourites
+    cursor.execute("""DELETE FROM favourites
         WHERE recipe_name = ?
     """, (recipe_name,))
-
     conn.commit()
     conn.close()
 
-#below is the behaviour tracking (favourites, cooked and rated)
+
+#user history/behaviour tracking functions
 
 def add_user_action(recipe_name, action, rating=None):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
-    # if its a rating, update the existing one instead of adding a new row
+    #the ratings are updated in place insteaf of adding a new row each time so only the most recent rating is used
     if action == "rated":
-        cursor.execute("""
-            SELECT id FROM user_history
+        cursor.execute("""SELECT id FROM user_history
             WHERE recipe_name = ? AND action = 'rated'
         """, (recipe_name,))
         existing = cursor.fetchone()
 
         if existing:
-            cursor.execute("""
-                UPDATE user_history
+            cursor.execute("""UPDATE user_history
                 SET rating = ?, timestamp = ?
                 WHERE id = ?
             """, (rating, datetime.now().isoformat(), existing[0]))
@@ -241,8 +214,7 @@ def add_user_action(recipe_name, action, rating=None):
             conn.close()
             return
 
-    cursor.execute("""
-        INSERT INTO user_history (recipe_name, action, rating, timestamp)
+    cursor.execute("""INSERT INTO user_history (recipe_name, action, rating, timestamp)
         VALUES (?, ?, ?, ?)
     """, (recipe_name, action, rating, datetime.now().isoformat()))
 
@@ -255,22 +227,23 @@ def get_user_history():
     conn.close()
     return df
 
-#below are all the profile funtions
 
-# profile functions
+#profile functions
 
-def add_profile(name):
+def add_profile(name, is_guest=False):
+    #this returns false if a profile with the same name already exists
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     try:
-        cursor.execute("INSERT INTO profiles (name) VALUES (?)", (name,))
+        cursor.execute("INSERT INTO profiles (name, isGuest) VALUES (?, ?)",
+            (name, int(is_guest))
+        )
         conn.commit()
         return True
     except sqlite3.IntegrityError:
         return False
     finally:
         conn.close()
-
 
 def get_all_profiles():
     conn = sqlite3.connect(DB_NAME)
@@ -280,12 +253,13 @@ def get_all_profiles():
     conn.close()
     return profiles
 
-
 def update_profile(profile_id, requirements):
+    #the values are pulled by name, not position, from lookup table so adding or re ordering feilds in diet requirements wont secretly write the wrong value to the wrong column
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE profiles SET
+    vec = requirements.requirements_vector
+    lookup = requirements.lookup_table
+    cursor.execute("""UPDATE profiles SET
             isVegetarian = ?,
             isVegan = ?,
             isPescatarian = ?,
@@ -298,10 +272,20 @@ def update_profile(profile_id, requirements):
             hasPeanuts = ?,
             hasSoy = ?
         WHERE id = ?
-    """, (*requirements.requirements_vector, profile_id))
+    """, (int(vec[lookup["isVegetarian"]]),
+        int(vec[lookup["isVegan"]]),
+        int(vec[lookup["isPescatarian"]]),
+        int(vec[lookup["hasDairy"]]),
+        int(vec[lookup["hasGluten"]]),
+        int(vec[lookup["hasEggs"]]),
+        int(vec[lookup["hasFish"]]),
+        int(vec[lookup["hasShellfish"]]),
+        int(vec[lookup["hasTreeNuts"]]),
+        int(vec[lookup["hasPeanuts"]]),
+        int(vec[lookup["hasSoy"]]),
+        profile_id))
     conn.commit()
     conn.close()
-
 
 def delete_profile(profile_id):
     conn = sqlite3.connect(DB_NAME)
@@ -310,6 +294,12 @@ def delete_profile(profile_id):
     conn.commit()
     conn.close()
 
+def delete_guest_profiles():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM profiles WHERE isGuest = 1")
+    conn.commit()
+    conn.close()
 
 def get_profile_by_id(profile_id):
     conn = sqlite3.connect(DB_NAME)
