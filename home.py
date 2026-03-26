@@ -40,7 +40,7 @@ def display_recipe_card(recipe_row, section="", pantry_match=None, show_rating_c
         if pantry_match == 1.0:
             colour = "green"
             label = f"You have all ingredients ({percentage}%)"
-        elif pantry_match >= 0.5:
+        elif pantry_match >= 0.1:
             colour = "orange"
             label = f"You have {percentage}% of ingredients"
         else:
